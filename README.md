@@ -1,4 +1,4 @@
-# Master DSBD & IA: Infrastructure DevOps Project
+## Master DSBD & IA: Infrastructure DevOps Project
 
 Ce projet met en place une infrastructure complète avec CI/CD, Kubernetes (K3s), et Monitoring sur AWS.
 
