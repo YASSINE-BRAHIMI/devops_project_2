@@ -62,7 +62,16 @@ jobs:
           echo "Testing connection to K3s API server..."
           kubectl cluster-info || echo "WARNING: Cannot reach cluster API server"
           kubectl get nodes --request-timeout=10s || echo "WARNING: Cannot list nodes"
+      - name: Debug kubeconfig
+        run: |
+          echo "=== Taille du fichier ==="
+          wc -c ~/.kube/config
 
+          echo "=== Première ligne ==="
+          head -1 ~/.kube/config
+
+          echo "=== Est-ce du base64 brut ? ==="
+          file ~/.kube/config
       - name: Deploy to K3s cluster
         run: |
           sed -i "s|YOUR_DOCKER_USERNAME|${{ secrets.DOCKERHUB_USERNAME }}|g" k8s/deployment.yaml
