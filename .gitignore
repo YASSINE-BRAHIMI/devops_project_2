@@ -1,0 +1,23 @@
+# Terraform
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform.lock.hcl
+terraform/terraform.exe
+
+# SSH Keys
+*.pem
+devops_key*
+
+# Kubeconfig (contains private keys)
+kubeconfig_github.yaml
+kubeconfig.yaml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/

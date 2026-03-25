@@ -1,0 +1,3 @@
+aws_region   = "us-east-1"
+instance_type = "t3.micro"
+public_key    = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC8UKeLQHKYrz/44uFVS69Yxf/JQHSA5E7ADle4gaY/iydTK5xlivsV5hqXf84lvnq3tfNZFnWIbaGlbiux1lxaPFLujvwYZGQUCVnEZ7yR1yvQuSnLe8BNQpZdyuMRHqDFgr70sybVmSRrIxBzH0iAmwhCgvYAy7Gu1YBWEEbFbhwCWSTI5YEgvpiR0k8NlxFtCRfQU3idB6yWwUlYaiOsVVMAmcDHL14PRHkR3GvOCY/BGtjGvdw5a5jHq3dnp3onQ7112mvtIJ5YDGcsLwDGQAcs21g4GLf+5cUzjFGfuA0NZegESzdkY5oZfC9qcJqNAKQsxLrELcDur4MVfZLD brh yassine@DESKTOP-LQADBIM"
