@@ -2,7 +2,7 @@
 
 Ce projet met en place une infrastructure complète avec CI/CD, Kubernetes (K3s), et Monitoring sur AWS.
 
-## Architecture du Projet
+# Architecture du Projet
 1. **Terraform**: Provisionnement de 2 instances EC2 (Master & Worker) dans un VPC dédié.
 2. **Ansible**: Installation automatique de Docker et K3s.
 3. **Application**: API REST Flask conteneurisée.
