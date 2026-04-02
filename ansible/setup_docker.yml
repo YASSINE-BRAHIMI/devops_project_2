@@ -1,36 +1,44 @@
 ---
-- name: Install Docker and Dependencies
-  hosts: all
-  become: yes
+# Ce playbook installe Docker sur TOUTES les machines (master + worker)
+- name: Install Docker on all nodes
+  hosts: all          # "all" = master + workers définis dans inventory.ini
+  become: yes         # become=yes → on exécute les commandes en tant que root (sudo)
+
   tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: yes
 
-    - name: Install required packages
+    # On installe les outils nécessaires pour ajouter le dépôt Docker
+    - name: Install dependencies
       apt:
-        name:
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - gnupg
-          - lsb-release
-          - python3-pip
-        state: present
+        # Liste des paquets requis pour ajouter une source externe sécurisée
+        name: [apt-transport-https, ca-certificates, curl, gnupg]
+        update_cache: yes   # Équivalent de "apt-get update" avant l'installation
 
+    # On télécharge la clé GPG officielle de Docker pour vérifier les paquets
+    - name: Add Docker GPG key
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      args:
+        # "creates" = si ce fichier existe déjà, on ne réexécute pas la commande
+        creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+    # On ajoute le dépôt officiel Docker dans les sources apt d'Ubuntu
+    - name: Add Docker repo
+      shell: |
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+        # $(lsb_release -cs) → détecte automatiquement la version Ubuntu (ex: jammy)
+
+    # On installe Docker Engine et ses composants depuis le dépôt officiel
     - name: Install Docker
       apt:
-        name: docker.io
-        state: present
+        # docker-ce          → le moteur Docker principal
+        # docker-ce-cli      → les commandes docker en ligne de commande
+        # containerd.io      → le runtime de conteneurs utilisé par Docker
+        name: [docker-ce, docker-ce-cli, containerd.io]
+        update_cache: yes   # On recharge les sources pour voir le nouveau dépôt Docker
 
-    - name: Ensure Docker is started and enabled
-      service:
-        name: docker
-        state: started
-        enabled: yes
-
+    # On ajoute l'utilisateur ubuntu au groupe docker
     - name: Add ubuntu user to docker group
       user:
-        name: ubuntu
-        groups: docker
-        append: yes
+        name: ubuntu        # L'utilisateur par défaut sur les EC2 Ubuntu AWS
+        groups: docker      # On l'ajoute au groupe docker
+        append: yes         # append=yes → on ne remplace pas ses groupes existants
+        # Sans ça, il faudrait taper "sudo docker" à chaque commande

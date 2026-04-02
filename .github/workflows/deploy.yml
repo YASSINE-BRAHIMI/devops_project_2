@@ -58,7 +58,6 @@ jobs:
           chmod 600 ~/.kube/config
 
       - name: Deploy to K3s cluster
-        run: |
           sed -i "s|DOCKERHUB_USERNAME|${{ secrets.DOCKERHUB_USERNAME }}|g" k8s/deployment.yaml
           kubectl apply -f k8s/deployment.yaml --validate=false
           kubectl rollout status deployment/flask-app

@@ -1,66 +1,29 @@
 provider "aws" {
-  region = var.aws_region
+  region = "eu-west-3" # Paris
 }
 
-# VPC Configuration
-resource "aws_vpc" "devops_vpc" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+# 1. Recherche dynamique de l'image Ubuntu 22.04 LTS
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
 
-  tags = {
-    Name = "devops-vpc"
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 }
 
-# Internet Gateway
-resource "aws_internet_gateway" "devops_igw" {
-  vpc_id = aws_vpc.devops_vpc.id
+# 2. Groupe de Sécurité corrigé (Auto-communication ajoutée)
+resource "aws_security_group" "k3s_sg" {
+  name        = "k3s_sg"
+  description = "Security group for K3s cluster"
 
-  tags = {
-    Name = "devops-igw"
-  }
-}
-
-# Public Subnet
-resource "aws_subnet" "public_subnet" {
-  vpc_id                  = aws_vpc.devops_vpc.id
-  cidr_block              = "10.0.1.0/24"
-  map_public_ip_on_launch = true
-  availability_zone       = "${var.aws_region}a"
-
-  tags = {
-    Name = "devops-public-subnet"
-  }
-}
-
-# Route Table
-resource "aws_route_table" "public_rt" {
-  vpc_id = aws_vpc.devops_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.devops_igw.id
-  }
-
-  tags = {
-    Name = "devops-public-rt"
-  }
-}
-
-# Route Table Association
-resource "aws_route_table_association" "public_rt_assoc" {
-  subnet_id      = aws_subnet.public_subnet.id
-  route_table_id = aws_route_table.public_rt.id
-}
-
-# Security Group
-resource "aws_security_group" "devops_sg" {
-  name        = "devops-sg"
-  description = "Security group for DevOps cluster"
-  vpc_id      = aws_vpc.devops_vpc.id
-
-  # SSH
+  # Accès SSH (Externe)
   ingress {
     from_port   = 22
     to_port     = 22
@@ -68,7 +31,7 @@ resource "aws_security_group" "devops_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # K3s API
+  # API Kubernetes (Externe)
   ingress {
     from_port   = 6443
     to_port     = 6443
@@ -76,79 +39,52 @@ resource "aws_security_group" "devops_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # HTTP for App
+  # Application Flask (Externe)
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 30001
+    to_port     = 30001
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # NodePort range for K8s services (includes app, prometheus, grafana)
+  # --- LA RÈGLE MANQUANTE : Autoriser les nœuds à se parler ---
   ingress {
-    from_port   = 30000
-    to_port     = 32767
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    self      = true 
   }
 
-  # Egress
+  # Tout le trafic sortant
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
-    Name = "devops-sg"
-  }
 }
 
-# Key Pair (assuming it exists or will be created)
-# For simplicity, we use an existing key pair name
-resource "aws_key_pair" "deployer" {
-  key_name   = "devops-key-v2"
-  public_key = var.public_key
-}
-
-# EC2 Instances
+# 3. Instance Master
 resource "aws_instance" "master" {
-  ami                    = var.ami_id
-  instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public_subnet.id
-  vpc_security_group_ids = [aws_security_group.devops_sg.id]
-  key_name               = aws_key_pair.deployer.key_name
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  key_name               = "the_working_key_v2"
+  vpc_security_group_ids = [aws_security_group.k3s_sg.id]
 
-  user_data = <<-EOF
-              #!/bin/bash
-              apt-get update
-              apt-get install -y docker.io
-              curl -sfL https://get.k3s.io | K3S_TOKEN=dsbd-devops-token sh -
-              EOF
-
-  tags = {
-    Name = "k3s-master"
-    Role = "master"
-  }
+  tags = { Name = "k3s-master" }
 }
 
+# 4. Instance Worker
 resource "aws_instance" "worker" {
-  ami                    = var.ami_id
-  instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public_subnet.id
-  vpc_security_group_ids = [aws_security_group.devops_sg.id]
-  key_name               = aws_key_pair.deployer.key_name
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  key_name               = "the_working_key_v2"
+  vpc_security_group_ids = [aws_security_group.k3s_sg.id]
 
-  user_data = <<-EOF
-              #!/bin/bash
-              apt-get update
-              apt-get install -y docker.io
-              curl -sfL https://get.k3s.io | K3S_URL=https://${aws_instance.master.private_ip}:6443 K3S_TOKEN=dsbd-devops-token sh -
-              EOF
-
-  tags = {
-    Name = "k3s-worker"
-    Role = "worker"
-  }
+  tags = { Name = "k3s-worker" }
 }
+
+# 5. Outputs pour Ansible
+output "master_public_ip" { value = aws_instance.master.public_ip }
+output "worker_public_ip" { value = aws_instance.worker.public_ip }
+output "worker_private_ip" { value = aws_instance.worker.private_ip }

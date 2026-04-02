@@ -1,20 +1,23 @@
-# Use an official Python runtime as a parent image
+# On part de l'image officielle Python 3.9 en version "slim" (légère, sans outils inutiles)
 FROM python:3.9-slim
 
-# Set the working directory in the container
+# On définit /app comme répertoire de travail dans le conteneur
+# Toutes les commandes suivantes s'exécutent depuis ce dossier
 WORKDIR /app
 
-# Copy the requirements file into the container
+# On copie SEULEMENT requirements.txt en premier (optimisation du cache Docker)
+# Si le code change mais pas les dépendances, Docker réutilise le cache de pip install
 COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt
+# On installe les dépendances Python listées dans requirements.txt
+# --no-cache-dir = on ne garde pas le cache pip pour réduire la taille de l'image
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /app
-COPY app.py .
+# On copie tout le reste du code source dans le conteneur
+COPY . .
 
-# Make port 5000 available to the world outside this container
+# On indique que le conteneur écoute sur le port 5000 (documentation, pas une règle)
 EXPOSE 5000
 
-# Run app.py when the container launches
+# La commande exécutée quand le conteneur démarre
 CMD ["python", "app.py"]
